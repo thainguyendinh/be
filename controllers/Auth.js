@@ -9,65 +9,61 @@ require("dotenv").config();
 
 const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 //sendOTP
-exports.sendotp= async(req,res)=>{
+exports.sendotp = async (req, res) => {
+  try {
+      console.log("sendotp called");
+      const { email } = req.body;
+      console.log("Email received:", email);
 
-  try{
-      //fetch email from req body
-      const {email}=req.body;
-      //Check if user already exists or not 
-      const checkUserPresent=await User.findOne({email});
-  
+      const checkUserPresent = await User.findOne({ email });
+      console.log("User check result:", checkUserPresent);
 
-      //if already exist,then return a response
-      if(checkUserPresent){
-        return res.status(401).json({
-          success:false,
-          message:"User already registered"
-        })
+      if (checkUserPresent) {
+          console.log("User already registered");
+          return res.status(401).json({
+              success: false,
+              message: "User already registered"
+          });
       }
 
-      //generate otp
-      var otp=otpGenerator.generate(6,{
-        upperCaseAlphabets:false,
-        lowerCaseAlphabets:false,
-        specialChars:false,
-      })
-      console.log("OTP GENERATED SUCCESSFULLY");
-
-      //check if unique
-      let result=await OTP.findOne({otp:otp});
-      
-      while(result){
-        otp=otpGenerator.generate(6,{
-          upperCaseAlphabets:false,
-          lowerCaseAlphabets:false,
-          specialChars:false,
-        })
-        result=await OTP.findOne({otp:otp});
-      }
-
-      //Entry in Db to check when user enters
-      //create object
-      const otpPayload={email,otp};
-      //create entry
-      const otpBody=await OTP.create(otpPayload);
-      console.log("DB ENTRY FOR OTP CREATED");
-      console.log(otpBody);
-
-      //return response
-      return res.status(200).json({
-        success:true,
-        message:"OTP SENT SUCCESSFULLY"
+      let otp = otpGenerator.generate(6, {
+          upperCaseAlphabets: false,
+          lowerCaseAlphabets: false,
+          specialChars: false,
       });
-      
-  }catch(err){
-    console.log("ERROR WHILE SENDING OTP:",err);
-    return res.status(500).json({
-      success:false,
-      message:err.message
-    })
+      console.log("OTP generated:", otp);
+
+      let result = await OTP.findOne({ otp: otp });
+      console.log("OTP uniqueness check result:", result);
+
+      while (result) {
+          otp = otpGenerator.generate(6, {
+              upperCaseAlphabets: false,
+              lowerCaseAlphabets: false,
+              specialChars: false,
+          });
+          result = await OTP.findOne({ otp: otp });
+          console.log("New OTP generated:", otp);
+      }
+
+      const otpPayload = { email, otp };
+      const otpBody = await OTP.create(otpPayload);
+      console.log("OTP entry in DB:", otpBody);
+
+      return res.status(200).json({
+          success: true,
+          message: "OTP SENT SUCCESSFULLY"
+      });
+
+  } catch (err) {
+      console.log("ERROR WHILE SENDING OTP:", err);
+      return res.status(500).json({
+          success: false,
+          message: err.message
+      });
   }
 }
+
 
 //signup 
 exports.signup= async(req,res)=>{
